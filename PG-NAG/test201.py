@@ -214,7 +214,6 @@ if __name__ == '__main__':
     # dictfile = open("best20_201.pkl", 'rb')
     # dict = pickle.load(dictfile)
     # dictfile.close()
-    # # 应用Shapley value计算\
     # # print(dict)
     # shapley_values = {}
     # # for key, value in dict.items():
