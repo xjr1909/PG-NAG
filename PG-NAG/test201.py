@@ -11,6 +11,7 @@ import numpy as np
 import copy
 from nas_201_api import NASBench201API as API
 from nasbench import api
+import re
 
 api201 = API('', verbose=False)
 NAS_BENCH_201 = ''
@@ -187,8 +188,70 @@ def get_metrics_from_index_list(index_list, ordered_dic, metrics_num, dataset, u
     return metrics
 
 
+def change(tensor):
+    max_indices = np.argmax(np.abs(tensor), axis=1)
+    max_index_list = list(max_indices)
+
+    index_to_string = {
+        0: 'none',
+        1: 'nor_conv_3x3',
+        2: 'skip_connect',
+        3: 'nor_conv_1x1',
+        4: "avg_pool_3x3"
+    }
+    selected_indices = max_index_list
+    formatted_string = "|{}~0|+|{}~0|{}~1|+|{}~0|{}~1|{}~2|"
+    formatted_string = formatted_string.format(
+        *[index_to_string[i] for i in selected_indices[:6]] +
+         [selected_indices[:6]] +
+         [index_to_string[selected_indices[6]]] if len(selected_indices) > 6 else None,
+        selected_indices[6] if len(selected_indices) > 6 else None
+    )
+    return formatted_string
 
 
+def group_into_tensors(outputs, group_size=7, fill_value=None):
+    tensor_list = []
+    for i in range(0, len(outputs), group_size):
+
+        group = outputs[i:i + group_size]
+        while len(group) < group_size:
+            group += (fill_value,)
+        tensor_list.append(group)
+    return tensor_list
+
+
+def extract_tensors_from_file(file_path):
+    tensor_pattern = re.compile(r'\[\[([^\]]+)\]\]')
+
+
+    tensors = []
+    tensor_all = []
+
+    with open(file_path, 'r') as file:
+        content = file.read()
+
+
+        matches = tensor_pattern.findall(content)
+
+        for match in matches:
+            clean_match = match.strip()
+            try:
+                parsed_tensors = eval(clean_match)
+                tensors.append(parsed_tensors)
+
+                if len(tensors) == 7:
+                    tensor_list = [list(item) for item in tensors]
+                    tensors = torch.tensor(tensor_list)
+
+                    tensor_all.append(tensors)
+                    tensors = []
+
+
+            except Exception as e:
+                print(f"Error parsing tensor: {e}")
+
+    return tensor_all
 
 
 
@@ -228,3 +291,26 @@ if __name__ == '__main__':
     #
     #     shapley_values = calculate_shapley_value(adjacency_matrix, operation_list)
     #     print(f"{shapley_values}")
+
+    # acc_cifar = []
+    # acc_cifar100_all = []
+    #
+    # tensor_all = extract_tensors_from_file(path)
+    # max_acc = -1
+    # max_acc_string = ""
+    #
+    # for i, element in enumerate(tensor_all):
+    #     # print(element)
+    #     element = element.tolist()
+    #     formatted_string = change(element)
+    #     # print(formatted_string)
+    #     index = api.query_index_by_arch(formatted_string)
+    #     results = api.get_more_info(index, 'cifar10', None, hp='200', is_random=True)
+    #     acc = results['test-accuracy']
+    #     acc_cifar.append(acc)
+    #     if acc > max_acc:
+    #         max_acc = acc
+    #         max_acc_string = formatted_string
+    #         print(max_acc)
+    #         print(max_acc_string)
+    #
