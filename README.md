@@ -1,4 +1,6 @@
 # PG-NAG
+This is main code for "Prior Knowledge Guided Neural Architecture Generation"
+
 ## Requirements
 torch==2.0.1
 
